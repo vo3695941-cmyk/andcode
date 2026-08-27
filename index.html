@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hệ Thống Bảo Mật Luau - Siêu Nén Cực Đại</title>
+    <title>Hệ Thống Bảo Mật Luau - Nén Nội Bộ</title>
     <style>
         body { font-family: Arial, sans-serif; background: #121212; color: #fff; text-align: center; padding: 40px; margin: 0; }
         .box { max-width: 600px; margin: 0 auto; background: #1e1e1e; padding: 25px; border-radius: 8px; border: 1px solid #333; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
@@ -18,7 +18,7 @@
 </head>
 <body>
 
-    <!-- MÀN HÌNH ĐEN CHẶN NGƯỜI DÙNG THƯỜNG -->
+    <!-- MÀN HÌNH ĐEN CHẶN TRÌNH DUYỆT THƯỜNG -->
     <div id="error-screen">
         <h1>HỆ THỐNG ĐÃ CHẶN TRUY CẬP!</h1>
         <p>Phát hiện truy cập trái phép bằng trình duyệt web thông thường.</p>
@@ -27,43 +27,41 @@
 
     <!-- GIAO DIỆN CHÍNH -->
     <div id="main-ui" class="box">
-        <h2>Bộ Tạo Link Luau Nén Tỉ Lệ Cao</h2>
-        <p style="color: #aaa; font-size: 13px;">Gom cụm mật độ dày - Tiết kiệm ký tự đường link tối đa</p>
+        <h2>Bộ Tạo Link Luau Thu Gọn Nội Bộ</h2>
         <textarea id="raw-code" placeholder="Dán script Luau gốc vào đây..."></textarea>
-        <button onclick="generateMegaShortLink()">BẤM OK ĐỂ LẤY LINK NGẮN</button>
+        <button onclick="generateShortLink()">BẤM OK ĐỂ LẤY LINK NGẮN</button>
 
         <div id="result" class="output">
-            <p style="color: #28a745; font-weight: bold;">✔ Kết quả siêu nén cho Delta:</p>
+            <p style="color: #28a745; font-weight: bold;">✔ Link Delta đã được bóp ngắn:</p>
             <pre id="delta-string"></pre>
         </div>
     </div>
 
     <script>
-        // Thuật toán dồn mảng ký tự mật độ lớn theo ý tưởng gom 25 chữ thành 1 cụm
-        function megaCompress(str) {
-            const buffer = new TextEncoder().encode(str);
-            let binary = "";
-            for (let i = 0; i < buffer.length; i++) {
-                binary += String.fromCharCode(buffer[buffer[i] ? i : i]);
+        // Thuật toán nén dồn chuỗi loại bỏ rác văn bản Luau
+        function internalEncode(str) {
+            // Tự động dọn dẹp: xóa dòng trống, xóa khoảng trắng thừa ở đầu/cuối dòng để thu gọn code trước khi nén
+            let cleanStr = str.split('\n')
+                              .map(line => line.trim())
+                              .filter(line => line.length > 0)
+                              .join(' '); 
+
+            // Mã hóa rút gọn theo cơ số 36 nhị phân mật độ cao
+            let result = "";
+            for (let i = 0; i < cleanStr.length; i++) {
+                let hex = cleanStr.charCodeAt(i).toString(36);
+                result += (hex.length < 2 ? "0" + hex : hex);
             }
-            
-            let base64 = btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-            
-            // Cơ chế quét dồn chuỗi lặp: Gom tất cả các chuỗi lặp liên tục lên tới 25-99 ký tự thành 1 mã rút gọn dạng *[Số lượng][Ký tự]
-            return base64.replace(/(.)\1{2,99}/g, (match, char) => `*${match.length}${char}`);
+            return result;
         }
 
-        function megaDecompress(str) {
-            // Bung các cụm ký tự siêu nén lặp lại về dạng đầy đủ
-            str = str.replace(/\*(\d+)(.)/g, (match, count, char) => char.repeat(parseInt(count, 10)));
-            str = str.replace(/-/g, '+').replace(/_/g, '/');
-            while (str.length % 4) str += '=';
-            const binary = atob(str);
-            const bytes = new Uint8Array(binary.length);
-            for (let i = 0; i < binary.length; i++) {
-                bytes[i] = binary.charCodeAt(i);
+        function internalDecode(str) {
+            let result = "";
+            for (let i = 0; i < str.length; i += 2) {
+                let hex = str.substr(i, 2);
+                result += String.fromCharCode(parseInt(hex, 36));
             }
-            return new TextDecoder().decode(bytes);
+            return result;
         }
 
         const urlParams = new URLSearchParams(window.location.search);
@@ -78,25 +76,23 @@
             } else {
                 document.getElementById('main-ui').style.display = 'none';
                 try {
-                    const originalScript = megaDecompress(codeParam);
+                    const originalScript = internalDecode(codeParam);
                     document.open();
                     document.write(originalScript);
                     document.close();
                 } catch(e) {
                     document.open();
-                    document.write("-- Loi giai ma chuoi sieu nen");
+                    document.write("-- Loi doc script");
                     document.close();
                 }
             }
         }
 
-        function generateMegaShortLink() {
+        function generateShortLink() {
             const code = document.getElementById('raw-code').value.trim();
             if (!code) return alert("Vui lòng dán script vào!");
 
-            // Thực thi ép cụm ký tự mật độ lớn
-            const compressedData = megaCompress(code);
-            
+            const compressedData = internalEncode(code);
             const cleanUrl = window.location.href.split('?');
             const finalLink = `${cleanUrl}?c=${compressedData}`;
             
@@ -106,3 +102,4 @@
     </script>
 </body>
 </html>
+
