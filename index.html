@@ -3,96 +3,94 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hệ Thống Bảo Mật Script Luau</title>
+    <title>Hệ Thống Bảo Mật Luau - Delta</title>
     <style>
-        body { font-family: Arial, sans-serif; background-color: #121212; color: #fff; text-align: center; padding: 40px; }
-        .container { max-width: 600px; margin: 0 auto; background: #1e1e1e; padding: 20px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-        textarea, input { width: 95%; padding: 10px; margin-top: 10px; background: #2d2d2d; border: 1px solid #444; color: #fff; border-radius: 4px; }
+        body { font-family: Arial, sans-serif; background: #121212; color: #fff; text-align: center; padding: 40px; margin: 0; }
+        .box { max-width: 600px; margin: 0 auto; background: #1e1e1e; padding: 25px; border-radius: 8px; border: 1px solid #333; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        textarea, input { width: 95%; padding: 12px; margin: 10px 0; background: #2d2d2d; border: 1px solid #444; color: #fff; border-radius: 4px; font-size: 14px; }
         textarea { height: 150px; resize: none; }
-        button { background: #007bff; color: white; border: none; padding: 12px 20px; margin-top: 15px; cursor: pointer; border-radius: 4px; width: 100%; font-weight: bold; }
+        button { background: #007bff; color: white; border: none; padding: 14px; cursor: pointer; border-radius: 4px; width: 100%; font-weight: bold; font-size: 16px; }
         button:hover { background: #0056b3; }
-        .result { margin-top: 20px; padding: 15px; background: #28a745; border-radius: 4px; display: none; word-break: break-all; }
-        #error-screen { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:#000; color:red; flex-direction:column; justify-content:center; align-items:center; font-size: 24px; z-index: 9999; }
+        .output { display: none; text-align: left; background: #1a1a1a; padding: 15px; margin-top: 20px; border-left: 4px solid #28a745; border-radius: 4px; }
+        pre { background: #2d2d2d; padding: 12px; overflow-x: auto; color: #66ff66; font-size: 13px; border-radius: 4px; white-space: pre-wrap; word-break: break-all; }
+        #error-screen { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; color: #ff3333; flex-direction: column; justify-content: center; align-items: center; text-align: center; font-family: monospace; z-index: 99999; }
+        #error-screen h1 { font-size: 35px; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
-    <!-- GIAO DIỆN CHẶN NGƯỜI DÙNG THƯỜNG -->
+    <!-- MÀN HÌNH CHẶN NGƯỜI DÙNG THƯỜNG -->
     <div id="error-screen">
-        <h2>HỆ THỐNG ĐÃ CHẶN TRUY CẬP!</h2>
-        <p>Bạn không thể xem mã nguồn script này bằng trình duyệt web.</p>
+        <h1>HỆ THỐNG ĐÃ CHẶN TRUY CẬP!</h1>
+        <p>Phát hiện truy cập trái phép bằng trình duyệt web thông thường.</p>
+        <p>Vui lòng sử dụng Delta Exploit để thực thi mã nguồn này.</p>
     </div>
 
-    <!-- GIAO DIỆN CHÍNH (CHỈ HIỂN THỊ KHI BẠN CẦN TẠO SCRIPT) -->
-    <div id="main-ui" class="container">
-        <h2>Bộ Tạo Link Bảo Mật Luau (Delta)</h2>
-        <input type="text" id="script-name" placeholder="Nhập tên script của bạn...">
-        <textarea id="script-content" placeholder="Dán script Luau (Lua) gốc vào đây..."></textarea>
-        <button onclick="generateScriptLink()">BẤM OK ĐỂ LẤY LINK</button>
-        
-        <div id="result-box" class="result">
-            <p><strong>Link chạy trên Delta của bạn:</strong></p>
-            <code id="generated-link"></code>
+    <!-- GIAO DIỆN CHÍNH ĐỂ BẠN TẠO LINK -->
+    <div id="main-ui" class="box">
+        <h2>Bộ Tạo Link Bảo Mật Luau Mới</h2>
+        <input type="text" id="script-id" placeholder="Đặt tên ID ngắn (Ví dụ: hellogui, btools)...">
+        <textarea id="raw-code" placeholder="Dán script Luau gốc vào đây..."></textarea>
+        <button onclick="generateSecureLink()">BẤM OK ĐỂ TẠO LINK NGẮN</button>
+
+        <div id="result" class="output">
+            <p style="color: #28a745; font-weight: bold;">✔ Thành công! Sao chép đoạn này dán vào Delta:</p>
+            <pre id="delta-string"></pre>
         </div>
     </div>
 
     <script>
-        // MẸO CHẶN: Kiểm tra xem có tham số ?get trên link không
         const urlParams = new URLSearchParams(window.location.search);
-        const isGetRequest = urlParams.has('get');
+        const hasScriptId = urlParams.has('id');
+        const userAgent = navigator.userAgent;
+        const isRobloxExecutor = userAgent.includes("Roblox") || userAgent.includes("Delta") || userAgent.includes("Go-http-client");
 
-        // Nếu người dùng thường bấm vào link (không qua Delta hoặc vào trực tiếp link kết quả)
-        if (isGetRequest && !navigator.userAgent.includes("Roblox") && !navigator.userAgent.includes("Delta")) {
-            document.getElementById('main-ui').style.display = 'none';
-            document.getElementById('error-screen').style.display = 'flex';
-        }
-
-        // Hàm mã hóa cơ bản (Obfuscate dạng Hex/Base64 để người thường không đọc được kể cả khi tìm cách tải file)
-        function encodeScript(source) {
-            return btoa(unescape(encodeURIComponent(source))); // Mã hóa sang Base64
-        }
-
-        function generateScriptLink() {
-            const name = document.getElementById('script-name').value;
-            const content = document.getElementById('script-content').value;
-            
-            if(!name || !content) {
-                alert("Vui lòng nhập đầy đủ tên và nội dung script!");
-                return;
-            }
-
-            // Mã hóa script ngay tại client
-            const encrypted = encodeScript(content);
-            
-            // Tạo link GitHub Pages kèm data (vì GitHub tĩnh nên ta đẩy data trực tiếp lên URL hash)
-            const currentUrl = window.location.href.split('?')[0].split('#')[0];
-            const finalLink = `${currentUrl}?get=${encodeURIComponent(name)}#${encrypted}`;
-
-            // Hiển thị kết quả dưới dạng lệnh loadstring cho Delta
-            const deltaLoadstring = `loadstring(game:HttpGet("${finalLink}"))()`;
-            
-            document.getElementById('generated-link').innerText = deltaLoadstring;
-            document.getElementById('result-box').style.display = 'block';
-        }
-
-        // Cách xử lý khi Delta gọi HttpGet
-        if (isGetRequest) {
-            const encryptedData = window.location.hash.substring(1);
-            if(encryptedData) {
-                try {
-                    const decrypted = decodeURIComponent(escape(atob(encryptedData)));
-                    // Trả về đoạn code Luau tự giải mã cho Delta
-                    document.body.innerHTML = decrypted; 
-                    document.body.style.whiteSpace = "pre";
-                    document.body.style.fontFamily = "monospace";
-                    document.body.style.background = "none";
-                    document.body.style.color = "initial";
-                } catch(e) {
-                    document.body.innerText = "-- Lỗi giải mã script";
+        if (hasScriptId) {
+            if (!isRobloxExecutor) {
+                document.getElementById('main-ui').style.display = 'none';
+                document.getElementById('error-screen').style.display = 'flex';
+            } else {
+                document.getElementById('main-ui').style.display = 'none';
+                const encryptedData = window.location.hash.substring(1);
+                if (encryptedData) {
+                    try {
+                        // Giải nén Hex ngược lại thành code Luau gốc cho Delta
+                        let decrypted = "";
+                        const matches = encryptedData.match(/\\(\d+)/g);
+                        if (matches) {
+                            for (let i = 0; i < matches.length; i++) {
+                                decrypted += String.fromCharCode(parseInt(matches[i].replace('\\', '')));
+                            }
+                        }
+                        document.open();
+                        document.write(decrypted);
+                        document.close();
+                    } catch(e) {
+                        document.open();
+                        document.write("-- Loi giai ma");
+                        document.close();
+                    }
                 }
             }
+        }
+
+        function generateSecureLink() {
+            const id = document.getElementById('script-id').value.trim().toLowerCase();
+            const code = document.getElementById('raw-code').value;
+            if (!id || !code) return alert("Vui lòng nhập đủ thông tin!");
+
+            // Mã hóa nén ký tự gọn hơn
+            let hexCode = "";
+            for (let i = 0; i < code.length; i++) {
+                hexCode += "\\" + code.charCodeAt(i);
+            }
+
+            const cleanUrl = window.location.href.split('?')[0].split('#')[0];
+            const finalProtectedUrl = `${cleanUrl}?id=${id}#${hexCode}`;
+            
+            document.getElementById('delta-string').innerText = `loadstring(game:HttpGet("${finalProtectedUrl}"))()`;
+            document.getElementById('result').style.display = 'block';
         }
     </script>
 </body>
 </html>
-
