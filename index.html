@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hệ Thống Bảo Mật Luau - Delta</title>
+    <title>Bộ Tạo Link Luau Siêu Ngắn - Tự Động 100%</title>
     <style>
         body { font-family: Arial, sans-serif; background: #121212; color: #fff; text-align: center; padding: 40px; margin: 0; }
         .box { max-width: 600px; margin: 0 auto; background: #1e1e1e; padding: 25px; border-radius: 8px; border: 1px solid #333; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-        textarea, input { width: 95%; padding: 12px; margin: 10px 0; background: #2d2d2d; border: 1px solid #444; color: #fff; border-radius: 4px; font-size: 14px; }
-        textarea { height: 150px; resize: none; }
+        textarea { width: 95%; height: 150px; padding: 12px; margin: 10px 0; background: #2d2d2d; border: 1px solid #444; color: #fff; border-radius: 4px; font-size: 14px; resize: none; }
         button { background: #007bff; color: white; border: none; padding: 14px; cursor: pointer; border-radius: 4px; width: 100%; font-weight: bold; font-size: 16px; }
         button:hover { background: #0056b3; }
         .output { display: none; text-align: left; background: #1a1a1a; padding: 15px; margin-top: 20px; border-left: 4px solid #28a745; border-radius: 4px; }
@@ -26,70 +25,82 @@
         <p>Vui lòng sử dụng Delta Exploit để thực thi mã nguồn này.</p>
     </div>
 
-    <!-- GIAO DIỆN CHÍNH ĐỂ BẠN TẠO LINK -->
+    <!-- GIAO DIỆN CHÍNH -->
     <div id="main-ui" class="box">
-        <h2>Bộ Tạo Link Bảo Mật Luau Mới</h2>
-        <input type="text" id="script-id" placeholder="Đặt tên ID ngắn (Ví dụ: hellogui, btools)...">
+        <h2>Bộ Tạo Link Bảo Mật Tự Động</h2>
+        <p style="color: #aaa; font-size: 13px;">Chỉ cần dán script vào và bấm nút, hệ thống tự lo hết</p>
         <textarea id="raw-code" placeholder="Dán script Luau gốc vào đây..."></textarea>
-        <button onclick="generateSecureLink()">BẤM OK ĐỂ TẠO LINK NGẮN</button>
+        <button id="btn-submit" onclick="generateLink()">BẤM OK ĐỂ LẤY LINK NGẮN</button>
 
         <div id="result" class="output">
-            <p style="color: #28a745; font-weight: bold;">✔ Thành công! Sao chép đoạn này dán vào Delta:</p>
+            <p style="color: #28a745; font-weight: bold;">✔ Xong luôn! Link Delta siêu ngắn của bạn đây:</p>
             <pre id="delta-string"></pre>
         </div>
     </div>
 
     <script>
         const urlParams = new URLSearchParams(window.location.search);
-        const hasScriptId = urlParams.has('id');
+        const key = urlParams.get('key');
         const userAgent = navigator.userAgent;
         const isRobloxExecutor = userAgent.includes("Roblox") || userAgent.includes("Delta") || userAgent.includes("Go-http-client");
 
-        if (hasScriptId) {
+        // KHÚC NÀY XỬ LÝ CHẶN / TRẢ CODE
+        if (key) {
             if (!isRobloxExecutor) {
+                // Người thường vào link -> Chặn đứng luôn
                 document.getElementById('main-ui').style.display = 'none';
                 document.getElementById('error-screen').style.display = 'flex';
             } else {
+                // Delta gọi link -> Âm thầm lấy code từ server lưu trữ về chạy mượt mà
                 document.getElementById('main-ui').style.display = 'none';
-                const encryptedData = window.location.hash.substring(1);
-                if (encryptedData) {
-                    try {
-                        // Giải nén Hex ngược lại thành code Luau gốc cho Delta
-                        let decrypted = "";
-                        const matches = encryptedData.match(/\\(\d+)/g);
-                        if (matches) {
-                            for (let i = 0; i < matches.length; i++) {
-                                decrypted += String.fromCharCode(parseInt(matches[i].replace('\\', '')));
-                            }
-                        }
+                fetch(`https://hastebin.com{key}`)
+                    .then(res => res.text())
+                    .then(code => {
                         document.open();
-                        document.write(decrypted);
+                        document.write(code);
                         document.close();
-                    } catch(e) {
+                    })
+                    .catch(() => {
                         document.open();
-                        document.write("-- Loi giai ma");
+                        document.write("-- Loi tai script");
                         document.close();
-                    }
-                }
+                    });
             }
         }
 
-        function generateSecureLink() {
-            const id = document.getElementById('script-id').value.trim().toLowerCase();
+        // KHÚC NÀY TỰ ĐỘNG TẠO LINK SIÊU NGẮN
+        function generateLink() {
             const code = document.getElementById('raw-code').value;
-            if (!id || !code) return alert("Vui lòng nhập đủ thông tin!");
+            if (!code) return alert("Vui lòng dán script vào trước!");
 
-            // Mã hóa nén ký tự gọn hơn
-            let hexCode = "";
-            for (let i = 0; i < code.length; i++) {
-                hexCode += "\\" + code.charCodeAt(i);
-            }
+            const btn = document.getElementById('btn-submit');
+            btn.innerText = "Đang tạo link ngắn...";
+            btn.disabled = true;
 
-            const cleanUrl = window.location.href.split('?')[0].split('#')[0];
-            const finalProtectedUrl = `${cleanUrl}?id=${id}#${hexCode}`;
-            
-            document.getElementById('delta-string').innerText = `loadstring(game:HttpGet("${finalProtectedUrl}"))()`;
-            document.getElementById('result').style.display = 'block';
+            // Tự động đẩy code lên server trung gian để lấy mã ID ngắn
+            fetch('https://hastebin.com', {
+                method: 'POST',
+                body: code
+            })
+            .then(res => res.json())
+            .then(data => {
+                const keyId = data.key;
+                const cleanUrl = window.location.href.split('?')[0];
+                
+                // Link đầu ra siêu ngắn gọn
+                const finalLink = `${cleanUrl}?key=${keyId}`;
+                
+                document.getElementById('delta-string').innerText = `loadstring(game:HttpGet("${finalLink}"))()`;
+                document.getElementById('result').style.display = 'block';
+                
+                btn.innerText = "BẤM OK ĐỂ LẤY LINK NGẮN";
+                btn.disabled = false;
+            })
+            .catch(err => {
+                alert("Lỗi kết nối hệ thống, vui lòng thử lại!");
+                btn.innerText = "BẤM OK ĐỂ LẤY LINK NGẮN";
+                btn.disabled = false;
+            });
         }
     </script>
 </body>
