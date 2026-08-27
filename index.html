@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bộ Tạo Link Luau Siêu Ngắn - Tự Động 100%</title>
+    <title>Hệ Thống Bảo Mật Luau - Delta</title>
     <style>
         body { font-family: Arial, sans-serif; background: #121212; color: #fff; text-align: center; padding: 40px; margin: 0; }
         .box { max-width: 600px; margin: 0 auto; background: #1e1e1e; padding: 25px; border-radius: 8px; border: 1px solid #333; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-        textarea { width: 95%; height: 150px; padding: 12px; margin: 10px 0; background: #2d2d2d; border: 1px solid #444; color: #fff; border-radius: 4px; font-size: 14px; resize: none; }
+        input { width: 95%; padding: 12px; margin: 10px 0; background: #2d2d2d; border: 1px solid #444; color: #fff; border-radius: 4px; font-size: 14px; }
         button { background: #007bff; color: white; border: none; padding: 14px; cursor: pointer; border-radius: 4px; width: 100%; font-weight: bold; font-size: 16px; }
         button:hover { background: #0056b3; }
         .output { display: none; text-align: left; background: #1a1a1a; padding: 15px; margin-top: 20px; border-left: 4px solid #28a745; border-radius: 4px; }
@@ -18,43 +18,49 @@
 </head>
 <body>
 
-    <!-- MÀN HÌNH CHẶN NGƯỜI DÙNG THƯỜNG -->
+    <!-- MÀN HÌNH ĐEN CHẶN NGƯỜI DÙNG THƯỜNG -->
     <div id="error-screen">
         <h1>HỆ THỐNG ĐÃ CHẶN TRUY CẬP!</h1>
         <p>Phát hiện truy cập trái phép bằng trình duyệt web thông thường.</p>
         <p>Vui lòng sử dụng Delta Exploit để thực thi mã nguồn này.</p>
     </div>
 
-    <!-- GIAO DIỆN CHÍNH -->
+    <!-- GIAO DIỆN CHÍNH (BỎ Ô DÁN SCRIPT PHỨC TẠP) -->
     <div id="main-ui" class="box">
-        <h2>Bộ Tạo Link Bảo Mật Tự Động</h2>
-        <p style="color: #aaa; font-size: 13px;">Chỉ cần dán script vào và bấm nút, hệ thống tự lo hết</p>
-        <textarea id="raw-code" placeholder="Dán script Luau gốc vào đây..."></textarea>
-        <button id="btn-submit" onclick="generateLink()">BẤM OK ĐỂ LẤY LINK NGẮN</button>
+        <h2>Bộ Tạo Link Rút Gọn Siêu Sạch</h2>
+        <p style="color: #aaa; font-size: 13px;">Chỉ cần nhập tên file bạn đã tạo trên GitHub</p>
+        <input type="text" id="script-name" placeholder="Ví dụ: hellogui, thantai, btools...">
+        <button onclick="generateShortLink()">BẤM OK ĐỂ LẤY LINK NGẮN</button>
 
         <div id="result" class="output">
-            <p style="color: #28a745; font-weight: bold;">✔ Xong luôn! Link Delta siêu ngắn của bạn đây:</p>
+            <p style="color: #28a745; font-weight: bold;">✔ Link Delta ngắn gọn của bạn:</p>
             <pre id="delta-string"></pre>
         </div>
     </div>
 
     <script>
         const urlParams = new URLSearchParams(window.location.search);
-        const key = urlParams.get('key');
+        const scriptId = urlParams.get('id');
         const userAgent = navigator.userAgent;
-        const isRobloxExecutor = userAgent.includes("Roblox") || userAgent.includes("Delta") || userAgent.includes("Go-http-client");
+        const isRoblox = userAgent.includes("Roblox") || userAgent.includes("Delta") || userAgent.includes("Go-http-client");
 
-        // KHÚC NÀY XỬ LÝ CHẶN / TRẢ CODE
-        if (key) {
-            if (!isRobloxExecutor) {
-                // Người thường vào link -> Chặn đứng luôn
+        // THAY CHÍNH XÁC THÔNG TIN GITHUB CỦA BẠN VÀO ĐÂY
+        const githubUser = "vo3695941-cmyk"; // Tên user GitHub lấy từ ảnh của bạn
+        const githubRepo = "andcode";        // Tên repository lấy từ ảnh của bạn
+
+        if (scriptId) {
+            if (!isRoblox) {
+                // Người thường vào bằng Chrome -> Hiện màn hình đen chặn ngay
                 document.getElementById('main-ui').style.display = 'none';
                 document.getElementById('error-screen').style.display = 'flex';
             } else {
-                // Delta gọi link -> Âm thầm lấy code từ server lưu trữ về chạy mượt mà
+                // Delta gọi tới -> Web âm thầm kéo trực tiếp code gốc từ link RAW về trả cho Delta
                 document.getElementById('main-ui').style.display = 'none';
-                fetch(`https://hastebin.com{key}`)
-                    .then(res => res.text())
+                fetch(`https://githubusercontent.com{githubUser}/${githubRepo}/main/${scriptId}.txt`)
+                    .then(res => {
+                        if (!res.ok) throw new Error();
+                        return res.text();
+                    })
                     .then(code => {
                         document.open();
                         document.write(code);
@@ -62,46 +68,24 @@
                     })
                     .catch(() => {
                         document.open();
-                        document.write("-- Loi tai script");
+                        document.write("-- Loi: Khong tim thay file script tren GitHub");
                         document.close();
                     });
             }
         }
 
-        // KHÚC NÀY TỰ ĐỘNG TẠO LINK SIÊU NGẮN
-        function generateLink() {
-            const code = document.getElementById('raw-code').value;
-            if (!code) return alert("Vui lòng dán script vào trước!");
+        // HÀM TẠO LINK SIÊU NGẮN
+        function generateShortLink() {
+            const name = document.getElementById('script-name').value.trim().toLowerCase();
+            if (!name) return alert("Vui lòng nhập tên file!");
 
-            const btn = document.getElementById('btn-submit');
-            btn.innerText = "Đang tạo link ngắn...";
-            btn.disabled = true;
-
-            // Tự động đẩy code lên server trung gian để lấy mã ID ngắn
-            fetch('https://hastebin.com', {
-                method: 'POST',
-                body: code
-            })
-            .then(res => res.json())
-            .then(data => {
-                const keyId = data.key;
-                const cleanUrl = window.location.href.split('?')[0];
-                
-                // Link đầu ra siêu ngắn gọn
-                const finalLink = `${cleanUrl}?key=${keyId}`;
-                
-                document.getElementById('delta-string').innerText = `loadstring(game:HttpGet("${finalLink}"))()`;
-                document.getElementById('result').style.display = 'block';
-                
-                btn.innerText = "BẤM OK ĐỂ LẤY LINK NGẮN";
-                btn.disabled = false;
-            })
-            .catch(err => {
-                alert("Lỗi kết nối hệ thống, vui lòng thử lại!");
-                btn.innerText = "BẤM OK ĐỂ LẤY LINK NGẮN";
-                btn.disabled = false;
-            });
+            const cleanUrl = window.location.href.split('?');
+            const finalLink = `${cleanUrl[0]}?id=${name}`;
+            
+            document.getElementById('delta-string').innerText = `loadstring(game:HttpGet("${finalLink}"))()`;
+            document.getElementById('result').style.display = 'block';
         }
     </script>
 </body>
 </html>
+
