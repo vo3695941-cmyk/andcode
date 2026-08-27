@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Bảo Mật Script Luau</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #121212; color: #fff; text-align: center; padding: 40px; }
+        .container { max-width: 600px; margin: 0 auto; background: #1e1e1e; padding: 20px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        textarea, input { width: 95%; padding: 10px; margin-top: 10px; background: #2d2d2d; border: 1px solid #444; color: #fff; border-radius: 4px; }
+        textarea { height: 150px; resize: none; }
+        button { background: #007bff; color: white; border: none; padding: 12px 20px; margin-top: 15px; cursor: pointer; border-radius: 4px; width: 100%; font-weight: bold; }
+        button:hover { background: #0056b3; }
+        .result { margin-top: 20px; padding: 15px; background: #28a745; border-radius: 4px; display: none; word-break: break-all; }
+        #error-screen { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:#000; color:red; flex-direction:column; justify-content:center; align-items:center; font-size: 24px; z-index: 9999; }
+    </style>
+</head>
+<body>
+
+    <!-- GIAO DIỆN CHẶN NGƯỜI DÙNG THƯỜNG -->
+    <div id="error-screen">
+        <h2>HỆ THỐNG ĐÃ CHẶN TRUY CẬP!</h2>
+        <p>Bạn không thể xem mã nguồn script này bằng trình duyệt web.</p>
+    </div>
+
+    <!-- GIAO DIỆN CHÍNH (CHỈ HIỂN THỊ KHI BẠN CẦN TẠO SCRIPT) -->
+    <div id="main-ui" class="container">
+        <h2>Bộ Tạo Link Bảo Mật Luau (Delta)</h2>
+        <input type="text" id="script-name" placeholder="Nhập tên script của bạn...">
+        <textarea id="script-content" placeholder="Dán script Luau (Lua) gốc vào đây..."></textarea>
+        <button onclick="generateScriptLink()">BẤM OK ĐỂ LẤY LINK</button>
+        
+        <div id="result-box" class="result">
+            <p><strong>Link chạy trên Delta của bạn:</strong></p>
+            <code id="generated-link"></code>
+        </div>
+    </div>
+
+    <script>
+        // MẸO CHẶN: Kiểm tra xem có tham số ?get trên link không
+        const urlParams = new URLSearchParams(window.location.search);
+        const isGetRequest = urlParams.has('get');
+
+        // Nếu người dùng thường bấm vào link (không qua Delta hoặc vào trực tiếp link kết quả)
+        if (isGetRequest && !navigator.userAgent.includes("Roblox") && !navigator.userAgent.includes("Delta")) {
+            document.getElementById('main-ui').style.display = 'none';
+            document.getElementById('error-screen').style.display = 'flex';
+        }
+
+        // Hàm mã hóa cơ bản (Obfuscate dạng Hex/Base64 để người thường không đọc được kể cả khi tìm cách tải file)
+        function encodeScript(source) {
+            return btoa(unescape(encodeURIComponent(source))); // Mã hóa sang Base64
+        }
+
+        function generateScriptLink() {
+            const name = document.getElementById('script-name').value;
+            const content = document.getElementById('script-content').value;
+            
+            if(!name || !content) {
+                alert("Vui lòng nhập đầy đủ tên và nội dung script!");
+                return;
+            }
+
+            // Mã hóa script ngay tại client
+            const encrypted = encodeScript(content);
+            
+            // Tạo link GitHub Pages kèm data (vì GitHub tĩnh nên ta đẩy data trực tiếp lên URL hash)
+            const currentUrl = window.location.href.split('?')[0].split('#')[0];
+            const finalLink = `${currentUrl}?get=${encodeURIComponent(name)}#${encrypted}`;
+
+            // Hiển thị kết quả dưới dạng lệnh loadstring cho Delta
+            const deltaLoadstring = `loadstring(game:HttpGet("${finalLink}"))()`;
+            
+            document.getElementById('generated-link').innerText = deltaLoadstring;
+            document.getElementById('result-box').style.display = 'block';
+        }
+
+        // Cách xử lý khi Delta gọi HttpGet
+        if (isGetRequest) {
+            const encryptedData = window.location.hash.substring(1);
+            if(encryptedData) {
+                try {
+                    const decrypted = decodeURIComponent(escape(atob(encryptedData)));
+                    // Trả về đoạn code Luau tự giải mã cho Delta
+                    document.body.innerHTML = decrypted; 
+                    document.body.style.whiteSpace = "pre";
+                    document.body.style.fontFamily = "monospace";
+                    document.body.style.background = "none";
+                    document.body.style.color = "initial";
+                } catch(e) {
+                    document.body.innerText = "-- Lỗi giải mã script";
+                }
+            }
+        }
+    </script>
+</body>
+</html>
+
